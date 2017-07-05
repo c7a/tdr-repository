@@ -1,0 +1,174 @@
+#!/usr/bin/env perl
+
+### BEGIN INIT INFO
+# Provides:          tdr-repository
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Should-Start:      $named
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: creates directories/mounts required by the TDR repository
+### END INIT INFO
+
+# Libs in c7a-perl
+use lib "/opt/c7a-perl/current/cmd/local/lib/perl5";
+
+# our tdr.conf is in the XML format supported by this module
+use Config::General;
+
+# Using Data::Dumper for debugging
+use Data::Dumper;
+
+# For make_path
+use File::Path qw(make_path remove_tree);
+use File::Spec;
+
+# Long options used (--conf is only one so far)
+use Getopt::Long;
+my $conf_file = "/etc/canadiana/tdr/tdr.conf";
+my $debug = 0;
+GetOptions("conf=s" => \$conf_file,
+           'debug' => \$debug);
+
+my $config = new Config::General(
+  -ConfigFile => $conf_file,
+);
+if (!config) {
+  die "Couldn't read config file: ${conf_file}\n";
+}
+my %confighash = $config->getall;
+if ($debug) { print Dumper(\%confighash);}
+
+if (! (%confighash && $confighash{'repository'})) {
+    die "No <repository> block in configuration file!\n";
+}
+my @repos = keys $confighash{'repository'};
+
+# If the name was missing, then all the other config options become keys.
+# Only one block allowed, so using only one key as way to differentiate.
+if (scalar @repos != 1) {
+    die "The <repository> block must be named!\n";       
+}
+my $reponame = shift @repos;
+my %repo = %{$confighash{'repository'}->{$reponame}};
+
+# Grab some required options, with some defaults
+my $basepath = $repo{'basepath'} ? $repo{'basepath'} : "/repotest";
+my $poolaips = $repo{'poolaips'} ? $repo{'poolaips'} : "poolaips";
+my $poolaippath = File::Spec->rel2abs($poolaips,$basepath);
+
+if ($debug) { print "Basepath: $basepath\nPoolaips: $poolaippath\n\n"; }
+
+# Ensure we have a hast of pools we can iterate through
+my %pools = %{$repo{'pool'}};
+if(!%pools) {
+    die "No named <pool> blocks in <repository> block!\n";
+}
+
+my @sharenfs = ();
+if(ref($repo{'sharenfs'}) eq "ARRAY") {
+    @sharenfs = @{$repo{'sharenfs'}};  # Multiple "sharenfs" entries already an array
+} elsif ($repo{'sharenfs'}) { # No "sharenfs" leaves array empty
+    @sharenfs = ($repo{'sharenfs'}); # Single "sharenfs" entry made into array
+}
+
+# Check if we are starting, stopping, or giving a Usage:
+use Switch;
+switch ($ARGV[0]) {
+    case "start" { start(); }
+    case "stop"  { stop();  }
+    else         {
+	die "Usage: $0 [--conf=/path/to/config.conf] {start|stop}\n";                 }
+}
+
+
+# What to run on "start"
+sub start {
+    my @mountpoints = ();
+    my @mountcommand= ();
+
+    # Make the poolaippath directory
+    make_path("${poolaippath}");
+
+    # Loop through the pools to mount each, and create directory of links.
+    foreach my $poolname (keys %pools) {
+	my %pool = %{$pools{$poolname}};
+
+	my $mountpoint = $pool{'mountpoint'};
+	@mountcommand= ();
+	my $mode = $pool{'mode'};
+	my $nfs4 = $pool{'nfs4'};
+	my $nfs4options = $pool{'nfs4options'};
+	my $bind = $pool{'bind'};
+	if ($bind) {
+	    # Make the mountpoint
+	    make_path("${basepath}/${mountpoint}");
+	    # Do the bind mount
+	    @mountcommand =('mount','--bind', "${bind}","${basepath}/${mountpoint}");
+	    if ($debug) { print "mount: ".join(" ",@mountcommand)."\n";}
+	    system(@mountcommand);
+	} elsif ($nfs4) {
+	    # Make the mountpoint
+	    make_path("${basepath}/${mountpoint}");
+	    # Do the nfs mount
+	    @mountcommand =('mount', $nfs4);
+	    if ($nfs4options) {
+		push(@mountcommand,"-o",$nfs4options);
+	    }
+            push(@mountcommand,"${basepath}/${mountpoint}");
+	    if ($debug) { print "mount: ".join(" ",@mountcommand)."\n";}
+	    system(@mountcommand);
+	}
+
+	if (!$pool{'aip'}) {
+	    die "Each pool must have an AIP path\n";
+	}
+        my $aippath = File::Spec->rel2abs($pool{'aip'},"${basepath}/${mountpoint}");
+        if ($debug) { print "aippath: $aippath\n";}
+	if (-d $aippath) { 
+	    push(@mountpoints,$aippath);
+
+	    # Make and mount the pool within poolaips
+	    make_path("${poolaippath}/$poolname");
+	    # Do the bind mount
+	    @mountcommand =('mount','--bind', $aippath,"${poolaippath}/$poolname");
+	    if ($debug) { print "bindmount poolaips: ".join(" ",@mountcommand)."\n";}
+	    system(@mountcommand);
+	} else {
+	    print STDERR "AIP path doesn't exist: $aippath\n";
+	}
+    }
+}
+
+# What to run on "stop"
+sub stop {
+
+    my @mountpoints = ();
+    my @mountcommand= ();
+
+    # Next step would be loop through the pools to unmount them
+    foreach my $poolname (keys %pools) {
+	my %pool = %{$pools{$poolname}};
+	my $mountpoint = $pool{'mountpoint'};
+	@mountcommand= ();
+	my $nfs4 = $pool{'nfs4'};
+	my $bind = $pool{'bind'};
+        if (-d "${poolaippath}/$poolname") {
+	    @mountcommand =('umount', "${poolaippath}/$poolname");
+	    if ($debug) { print "Unmount poolaip: ".join(" ",@mountcommand)."\n";}
+	    system(@mountcommand);
+	    rmdir "${poolaippath}/$poolname";
+	}
+	if ($bind || $nfs4) {
+	    @mountcommand =('umount', "${basepath}/${mountpoint}");
+	    if ($debug) { print "Unmount: ".join(" ",@mountcommand)."\n";}
+	    system(@mountcommand);
+	    rmdir "${basepath}/${mountpoint}";
+	}
+    }
+    # Remove the poolaips directory
+    rmdir $poolaippath;
+
+    # Remove basepath, if it is empty...
+    rmdir $basepath;
+}
