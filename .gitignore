@@ -28,8 +28,11 @@ inc/
 /blib/
 /_eumm/
 /*.gz
-/Makefile
-/Makefile.old
 /MANIFEST.bak
 /pm_to_blib
 /*.zip
+
+# gpb related
+debian/tdr-repository.debhelper.log
+debian/tdr-repository.substvars
+debian/tdr-repository/

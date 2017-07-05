@@ -1,0 +1,11 @@
+Source: tdr-repository
+Section: admin
+Priority: extra
+Maintainer: Russell McOrmond <Russell.McOrmond@canadiana.ca>
+Uploaders: Russell McOrmond <Russell.McOrmond@canadiana.ca>
+
+Package: tdr-repository
+Architecture: any
+Depends: perl, perl-base, libconfig-general-perl, libfile-spec-perl, libfile-path-perl
+Description: utility to mount/unmount disks used in a TDR file repository
+

@@ -1,0 +1,7 @@
+tdr-repository (0.1) trusty; urgency=low
+
+  * Initial release.
+    - Source for tdr-repository moved from internal subversion http://svn.c7a.ca/svn/c7a/tdr/trunk/sbin/tdr-repository?p=6653
+    - Simple Makefile created
+
+ -- Russell McOrmond <Russell.McOrmond@canadiana.ca>  Tue, 04 Jul 2017 13:55:09 -0400
