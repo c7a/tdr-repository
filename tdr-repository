@@ -42,7 +42,7 @@ if ($debug) { print Dumper(\%confighash);}
 if (! (%confighash && $confighash{'repository'})) {
     die "No <repository> block in configuration file!\n";
 }
-my @repos = keys $confighash{'repository'};
+my @repos = keys %{$confighash{'repository'}};
 
 # If the name was missing, then all the other config options become keys.
 # Only one block allowed, so using only one key as way to differentiate.
