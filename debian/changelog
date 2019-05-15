@@ -1,3 +1,22 @@
+tdr-repository (0.1ubuntu7) bionic; urgency=medium
+
+  * Change wasn't pulled correctly, creating new package. 
+
+ -- Russell McOrmond <rmcormond@crkn.ca>  Wed, 15 May 2019 17:36:25 -0400
+
+tdr-repository (0.1ubuntu6) bionic; urgency=medium
+
+  * Fix problem with experimental feature no longer available in new Perl versions
+    - https://github.com/crkn-rcdr/tdr-repository/pull/3 
+
+ -- Russell McOrmond <rmcormond@crkn.ca>  Wed, 15 May 2019 13:39:37 -0400
+
+tdr-repository (0.1ubuntu5) bionic; urgency=medium
+
+  * Package for Bionic 
+
+ -- Russell McOrmond <rmcormond@crkn.ca>  Thu, 14 Feb 2019 15:12:51 -0500
+
 tdr-repository (0.1) trusty; urgency=low
 
   * Initial release.

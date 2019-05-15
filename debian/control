@@ -1,8 +1,9 @@
 Source: tdr-repository
 Section: admin
 Priority: extra
-Maintainer: Russell McOrmond <Russell.McOrmond@canadiana.ca>
-Uploaders: Russell McOrmond <Russell.McOrmond@canadiana.ca>
+Maintainer: Russell McOrmond <rmcormond@crkn.ca>
+Uploaders: Russell McOrmond <rmcormond@crkn.ca>
+Build-Depends: debhelper (>= 7)
 
 Package: tdr-repository
 Architecture: any
