@@ -10,9 +10,6 @@
 # Short-Description: creates directories/mounts required by the TDR repository
 ### END INIT INFO
 
-# Libs in c7a-perl
-use lib "/opt/c7a-perl/current/cmd/local/lib/perl5";
-
 # our tdr.conf is in the XML format supported by this module
 use Config::General;
 
